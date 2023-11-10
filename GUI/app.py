@@ -76,83 +76,106 @@ class ChatApp(QMainWindow):
         self.setWindowTitle('Chat with GPT')
         self.setGeometry(100, 100, 480, 600)
         self.initUI()
-        self.screenshot_pixmap = None  # This will hold the QPixmap of the screenshot
+        self.queued_images = []   # This will hold the QPixmap of the screenshot
 
     def initUI(self):
+        # Main layout container
+        main_layout = QVBoxLayout()
+        
         # Chat display area
-        self.chat_display = QTextEdit(self)
+        self.chat_display = QTextEdit()
         self.chat_display.setReadOnly(True)
+        main_layout.addWidget(self.chat_display)
 
-        # Screenshot preview area
-        self.screenshot_label = QLabel(self)
-        self.screenshot_label.setAlignment(Qt.AlignCenter)
-        self.screenshot_label.setFixedSize(60, 60)  # Smaller fixed size
-        self.screenshot_label.setStyleSheet("background-color: rgba(0, 0, 0, 0);") 
+        # Horizontal layout for image previews
+        self.image_preview_layout = QHBoxLayout()
+        
+        # Scroll area for image previews
+        self.image_preview_scroll_area = QScrollArea()
+        self.image_preview_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.image_preview_scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.image_preview_scroll_area.setWidgetResizable(True)
+        
+        # Container widget for the images
+        self.image_preview_widget = QWidget()
+        self.image_preview_widget.setLayout(self.image_preview_layout)
+        self.image_preview_scroll_area.setWidget(self.image_preview_widget)
+        
+        # Fixed height for the scroll area to make it look like an input area, but expandable width
+        self.image_preview_scroll_area.setFixedHeight(120)
+        main_layout.addWidget(self.image_preview_scroll_area)
 
         # Text input for messages
-        self.text_input = QLineEdit(self)
+        self.text_input = QLineEdit()
         self.text_input.setPlaceholderText('Type your message here...')
-        
+        main_layout.addWidget(self.text_input)
+
         # Send button
-        self.send_button = QPushButton('Send', self)
+        self.send_button = QPushButton('Send')
         self.send_button.clicked.connect(self.sendMessage)
-
-        # Screenshot button
-        self.screenshot_button = QPushButton('Screenshot', self)
-        self.screenshot_button.clicked.connect(self.openScreenshotDialog)
-
-        # Layout setup
-        layout = QVBoxLayout()
-        chat_area = QWidget()
-        chat_area.setLayout(layout)
-        layout.addWidget(self.chat_display)
-        layout.addWidget(self.screenshot_label)  # Add the screenshot preview area to the layout
-        layout.addWidget(self.text_input)
         
-        controls_layout = QHBoxLayout()
-        controls_layout.addWidget(self.send_button)
-        controls_layout.addWidget(self.screenshot_button)
+        # Screenshot button
+        self.screenshot_button = QPushButton('Screenshot')
+        self.screenshot_button.clicked.connect(self.openScreenshotDialog)
+        
+        # Layout for buttons
+        button_layout = QHBoxLayout()
+        button_layout.addWidget(self.send_button)
+        button_layout.addWidget(self.screenshot_button)
+        main_layout.addLayout(button_layout)
 
-        controls_widget = QWidget()
-        controls_widget.setLayout(controls_layout)
+        # Central widget setup
+        central_widget = QWidget()
+        central_widget.setLayout(main_layout)
+        self.setCentralWidget(central_widget)
 
-        layout.addWidget(controls_widget)
-
-        self.setCentralWidget(chat_area)
 
     def openScreenshotDialog(self):
         self.screenshot_dialog = ScreenshotDialog()
-        self.screenshot_dialog.screenshotTaken.connect(self.displayScreenshotPreview)
+        self.screenshot_dialog.screenshotTaken.connect(self.queueScreenshot)
         self.screenshot_dialog.show()
 
-    def displayScreenshotPreview(self, pixmap):
-        # Normalize the screenshot size to the smaller fixed size
-        normalized_pixmap = pixmap.scaled(60, 60, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        self.screenshot_pixmap = normalized_pixmap
-        self.screenshot_label.setPixmap(normalized_pixmap)
+    # def displayScreenshotPreview(self, pixmap):
+    #     # Normalize the screenshot size to the smaller fixed size
+    #     normalized_pixmap = pixmap.scaled(60, 60, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+    #     self.screenshot_pixmap = normalized_pixmap
+    #     self.screenshot_label.setPixmap(normalized_pixmap)
+
+    def queueScreenshot(self, pixmap):
+        # Normalize the screenshot size and add it to the queue
+        normalized_pixmap = pixmap.scaled(160, 120, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        self.queued_images.append(normalized_pixmap)
+
+        # Create a label to show the thumbnail and add it to the image_preview_layout
+        label = QLabel()
+        label.setPixmap(normalized_pixmap)
+        label.setFixedSize(160, 120)
+        self.image_preview_layout.addWidget(label) 
 
     def sendMessage(self):
         message = self.text_input.text().strip()
-        if message or self.screenshot_pixmap:
-            self.appendMessage("You:", message, self.screenshot_pixmap)
+        if message or self.queued_images:
+            self.appendMessage("You:", message, self.queued_images)
             self.text_input.clear()
-            self.screenshot_label.clear()  # Clear the preview
-            self.screenshot_label.setFixedSize(60, 60)  # Reset the size if it was changed
-            self.screenshot_pixmap = None  # Reset the screenshot pixmap
+            # Clear the preview area
+            for i in reversed(range(self.image_preview_layout.count())): 
+                widget_to_remove = self.image_preview_layout.itemAt(i).widget()
+                if widget_to_remove is not None:  # Check if it is a widget before removing
+                    self.image_preview_layout.removeWidget(widget_to_remove)
+                    widget_to_remove.setParent(None)
+            self.queued_images.clear() 
 
-    def appendMessage(self, prefix, message, pixmap=None):
+    def appendMessage(self, prefix, message, images=None):
         cursor = self.chat_display.textCursor()
         cursor.movePosition(cursor.End)
         self.chat_display.setTextCursor(cursor)
         if message:
             self.chat_display.insertPlainText(prefix + " " + message + "\n")
-        if pixmap:
-            # Ensure we add a newline before and after the image if there is also text
-            if message:
+        if images:
+            for image in images:
                 cursor.insertBlock()
-            cursor.insertImage(pixmap.toImage())
-            if message:
-                cursor.insertBlock()
+                cursor.insertImage(image.toImage())
+            cursor.insertBlock()
         self.chat_display.ensureCursorVisible()
 
 
