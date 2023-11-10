@@ -9,22 +9,11 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QPushButton, QTextEdit, 
 class WorkerSignals(QObject):
     finished = pyqtSignal(object) # The parameter will be the response from the server
 
+# Constants for image sizes and spacing
+IMAGE_WIDTH = 160
+IMAGE_HEIGHT = 120
+IMAGE_SPACING = 10  # Space between images
 
-# class ScreenshotWorker(QRunnable):
-#     def __init__(self, image_path, text):
-#         super(ScreenshotWorker, self).__init__()
-#         self.image_path = image_path
-#         self.text = text
-#         self.signlats = WorkerSignals()
-
-#     def run(self):
-#         # Here you would send the image and text to your server
-#         # I'm using 'httpbin.org/post' as a placeholder URL for demonstration
-#         url = 'http://httpbin.org/post'
-#         files = {'screenshot': open(self.image_path, 'rb')}
-#         data = {'text': self.text}
-#         # response = requests.post(url, files=files, data=data)
-#         # self.signals.finished.emit(response.json())  # Emit the response
 
 class ScreenshotDialog(QDialog):
 
@@ -135,12 +124,6 @@ class ChatApp(QMainWindow):
         self.screenshot_dialog.screenshotTaken.connect(self.queueScreenshot)
         self.screenshot_dialog.show()
 
-    # def displayScreenshotPreview(self, pixmap):
-    #     # Normalize the screenshot size to the smaller fixed size
-    #     normalized_pixmap = pixmap.scaled(60, 60, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-    #     self.screenshot_pixmap = normalized_pixmap
-    #     self.screenshot_label.setPixmap(normalized_pixmap)
-
     def queueScreenshot(self, pixmap):
         # Normalize the screenshot size and add it to the queue
         normalized_pixmap = pixmap.scaled(160, 120, Qt.KeepAspectRatio, Qt.SmoothTransformation)
@@ -152,9 +135,22 @@ class ChatApp(QMainWindow):
         label.setFixedSize(160, 120)
         self.image_preview_layout.addWidget(label) 
 
+    def queueScreenshot(self, pixmap):
+        # Scale the screenshot to a standard size
+        normalized_pixmap = pixmap.scaled(IMAGE_WIDTH, IMAGE_HEIGHT, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        self.queued_images.append(normalized_pixmap)
+
+        # Create a label for the thumbnail, add margins, and add it to the layout
+        label = QLabel()
+        label.setPixmap(normalized_pixmap)
+        label.setFixedSize(IMAGE_WIDTH, IMAGE_HEIGHT)
+        label.setStyleSheet(f"margin-right: {IMAGE_SPACING}px;")  # Add spacing between thumbnails
+        self.image_preview_layout.addWidget(label)
+
     def sendMessage(self):
         message = self.text_input.text().strip()
         if message or self.queued_images:
+            # Append message and queued images to the chat display
             self.appendMessage("You:", message, self.queued_images)
             self.text_input.clear()
             # Clear the preview area
@@ -163,19 +159,26 @@ class ChatApp(QMainWindow):
                 if widget_to_remove is not None:  # Check if it is a widget before removing
                     self.image_preview_layout.removeWidget(widget_to_remove)
                     widget_to_remove.setParent(None)
-            self.queued_images.clear() 
+            self.queued_images = []  # Clear the image queue
 
     def appendMessage(self, prefix, message, images=None):
         cursor = self.chat_display.textCursor()
         cursor.movePosition(cursor.End)
         self.chat_display.setTextCursor(cursor)
+        
+        # Insert text message if available
         if message:
             self.chat_display.insertPlainText(prefix + " " + message + "\n")
+        
+        # Insert images if available
         if images:
-            for image in images:
-                cursor.insertBlock()
-                cursor.insertImage(image.toImage())
-            cursor.insertBlock()
+            for img in images:
+                img = img.scaled(IMAGE_WIDTH, IMAGE_HEIGHT, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                cursor.insertImage(img.toImage())
+                cursor.insertText(" ")  # Add space after each image
+
+            self.chat_display.insertPlainText("\n")  # Add a newline after the last image
+
         self.chat_display.ensureCursorVisible()
 
 
