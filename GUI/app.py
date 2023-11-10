@@ -124,26 +124,16 @@ class ChatApp(QMainWindow):
         self.screenshot_dialog.screenshotTaken.connect(self.queueScreenshot)
         self.screenshot_dialog.show()
 
-    def queueScreenshot(self, pixmap):
-        # Normalize the screenshot size and add it to the queue
-        normalized_pixmap = pixmap.scaled(160, 120, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        self.queued_images.append(normalized_pixmap)
-
-        # Create a label to show the thumbnail and add it to the image_preview_layout
-        label = QLabel()
-        label.setPixmap(normalized_pixmap)
-        label.setFixedSize(160, 120)
-        self.image_preview_layout.addWidget(label) 
 
     def queueScreenshot(self, pixmap):
         # Scale the screenshot to a standard size
-        normalized_pixmap = pixmap.scaled(IMAGE_WIDTH, IMAGE_HEIGHT, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        normalized_pixmap = pixmap.scaled(IMAGE_WIDTH, IMAGE_HEIGHT, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
         self.queued_images.append(normalized_pixmap)
 
-        # Create a label for the thumbnail, add margins, and add it to the layout
+        # Create a label for the thumbnail, set a fixed size to avoid different sizes being displayed
         label = QLabel()
         label.setPixmap(normalized_pixmap)
-        label.setFixedSize(IMAGE_WIDTH, IMAGE_HEIGHT)
+        label.setFixedSize(IMAGE_WIDTH + IMAGE_SPACING, IMAGE_HEIGHT)  # Include spacing in fixed size
         label.setStyleSheet(f"margin-right: {IMAGE_SPACING}px;")  # Add spacing between thumbnails
         self.image_preview_layout.addWidget(label)
 
@@ -173,7 +163,6 @@ class ChatApp(QMainWindow):
         # Insert images if available
         if images:
             for img in images:
-                img = img.scaled(IMAGE_WIDTH, IMAGE_HEIGHT, Qt.KeepAspectRatio, Qt.SmoothTransformation)
                 cursor.insertImage(img.toImage())
                 cursor.insertText(" ")  # Add space after each image
 
