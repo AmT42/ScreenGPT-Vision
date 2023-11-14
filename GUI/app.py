@@ -1,10 +1,18 @@
 import sys
 import requests
-from PyQt5.QtCore import Qt, QRect, QPoint, pyqtSignal, QObject
+from PyQt5.QtCore import Qt, QRect, QPoint, pyqtSignal, QObject, QByteArray, QBuffer, QThread
 from PyQt5.QtGui import QPixmap, QPainter, QPen, QIcon, QGuiApplication, QImage
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QPushButton, QTextEdit, QDialog, QVBoxLayout,
                              QLabel, QWidget, QHBoxLayout, QLineEdit, QScrollArea)
+import base64
 
+def pixmap_to_base64(pixmap):
+    byte_array = QByteArray()
+    buffer = QBuffer(byte_array)
+    buffer.open(QBuffer.WriteOnly)
+    pixmap.save(buffer, "JPEG")
+    base64_data = base64.b64encode(byte_array.data()).decode("utf-8")
+    return f"data:image/jpeg;base64, {base64_data}"
 
 class WorkerSignals(QObject):
     finished = pyqtSignal(object) # The parameter will be the response from the server
@@ -14,6 +22,17 @@ IMAGE_WIDTH = 160
 IMAGE_HEIGHT = 120
 IMAGE_SPACING = 10  # Space between images
 
+class APICaller(QThread):
+    response_received = pyqtSignal(object)
+     
+    def __init__(self, url, data):
+        super().__init__()
+        self.url = url
+        self.data = data
+
+    def run(self):
+        response = requests.post(self.url, json = self.data)
+        self.response_received.emit(response)
 
 class ScreenshotDialog(QDialog):
 
@@ -140,17 +159,42 @@ class ChatApp(QMainWindow):
     def sendMessage(self):
         message = self.text_input.text().strip()
         if message or self.queued_images:
-            # Append message and queued images to the chat display
+            # Display the user's message and images in the chat
             self.appendMessage("You:", message, self.queued_images)
+            
+            # Convert queued images to base64 strings
+            base64_images = [pixmap_to_base64(img) for img in self.queued_images]
+
+            # Prepare the data for the POST request
+            data = {"text": message, "images": base64_images}
+            
+            # Create and start a thread to send the request without freezing the UI
+            api_caller = APICaller('http://localhost:8000/chatGPT', data)
+            api_caller.response_received.connect(self.handleResponse)
+            api_caller.start()
+
             self.text_input.clear()
-            # Clear the preview area
-            for i in reversed(range(self.image_preview_layout.count())): 
-                widget_to_remove = self.image_preview_layout.itemAt(i).widget()
-                if widget_to_remove is not None:  # Check if it is a widget before removing
-                    self.image_preview_layout.removeWidget(widget_to_remove)
-                    widget_to_remove.setParent(None)
+            self.clearImagePreviews()
             self.queued_images = []  # Clear the image queue
 
+    def handleResponse(self, response):
+        if response.status_code == 200:
+            # Append response to chat display
+            self.appendMessage("GPT:", response.json()["response"])
+        else:
+            # Handle error
+            self.appendMessage("Error:", "Failed to get response from the server.")
+
+    def clearImagePreviews(self):
+        # Clear the preview area
+        for i in reversed(range(self.image_preview_layout.count())): 
+            widget_to_remove = self.image_preview_layout.itemAt(i).widget()
+            if widget_to_remove is not None:  # Check if it is a widget before removing
+                self.image_preview_layout.removeWidget(widget_to_remove)
+                widget_to_remove.setParent(None)
+
+
+    
     def appendMessage(self, prefix, message, images=None):
         cursor = self.chat_display.textCursor()
         cursor.movePosition(cursor.End)
