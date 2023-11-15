@@ -1,9 +1,9 @@
 import sys
 import requests
-from PyQt5.QtCore import Qt, QRect, QPoint, pyqtSignal, QObject, QByteArray, QBuffer, QThread
-from PyQt5.QtGui import QPixmap, QPainter, QPen, QIcon, QGuiApplication, QImage
+from PyQt5.QtCore import Qt, QRect, QPoint, pyqtSignal, QObject, QByteArray, QBuffer, QThread, QTimer
+from PyQt5.QtGui import QPixmap, QPainter, QPen, QIcon, QGuiApplication, QImage, QKeySequence
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QPushButton, QTextEdit, QDialog, QVBoxLayout,
-                             QLabel, QWidget, QHBoxLayout, QLineEdit, QScrollArea)
+                             QLabel, QWidget, QHBoxLayout, QLineEdit, QScrollArea, QShortcut)
 import base64
 
 def pixmap_to_base64(pixmap):
@@ -47,12 +47,27 @@ class ScreenshotDialog(QDialog):
         self.end = QPoint()
         self.is_selecting = False
 
+    # def showEvent(self, event):
+    #     super().showEvent(event)
+    #     self.activateWindow()  # Make sure the window is active
+    #     self.raise_()   
+
+
     def paintEvent(self, event):
         if self.is_selecting:
             qp = QPainter(self)
             qp.setPen(QPen(Qt.red, 2, Qt.SolidLine))
             qp.setBrush(Qt.transparent)
-            rect = QRect(self.begin, self.end)
+            
+            # Translate the coordinates relative to the virtual desktop
+            global_begin = QApplication.desktop().mapToGlobal(self.begin)
+            global_end = QApplication.desktop().mapToGlobal(self.end)
+
+            # Since the dialog is full screen, map back from global to local
+            local_begin = self.mapFromGlobal(global_begin)
+            local_end = self.mapFromGlobal(global_end)
+            
+            rect = QRect(local_begin, local_end).normalized()
             qp.drawRect(rect)
 
     def mousePressEvent(self, event):
@@ -65,17 +80,38 @@ class ScreenshotDialog(QDialog):
         self.end = event.pos()
         self.update()
 
+
     def mouseReleaseEvent(self, event):
+        self.end = event.pos()
         self.is_selecting = False
         self.takeScreenshot()
+        self.close()  # Exit the screenshot mode
 
     def takeScreenshot(self):
-        self.hide()  # Hide the overlay before taking the screenshot
-        screenshot = QGuiApplication.primaryScreen().grabWindow(0)
-        rect = QRect(self.begin, self.end).normalized()
-        cropped = screenshot.copy(rect)
-        self.screenshotTaken.emit(cropped)  # Emit the screenshot QPixmap
-        self.close()   # Close the dialog after taking the screenshot
+        # ... existing code to hide the dialog and process events ...
+        self.hide()
+        QGuiApplication.processEvents()
+
+        # Get the current screen based on the application's window
+        current_screen = QGuiApplication.screenAt(self.pos())
+
+        # Now we take the screenshot of the current screen
+        screenshot = current_screen.grabWindow(0)
+        # Take a screenshot of the entire virtual desktop
+        # full_screenshot = QGuiApplication.primaryScreen().grabWindow(QApplication.desktop().winId())
+
+        # Translate the selection points to global coordinates
+        global_begin = QApplication.desktop().mapToGlobal(self.begin)
+        global_end = QApplication.desktop().mapToGlobal(self.end)
+
+        # Make a QRect from the two global points and normalize it
+        selection_rect = QRect(global_begin, global_end).normalized()
+
+        # Crop the full_screenshot to the selection_rect
+        cropped = screenshot.copy(selection_rect)
+        self.screenshotTaken.emit(cropped)
+        self.show()  # Show the dialog again if needed
+        
 
 
 class ChatApp(QMainWindow):
@@ -85,6 +121,7 @@ class ChatApp(QMainWindow):
         self.setGeometry(100, 100, 480, 600)
         self.initUI()
         self.queued_images = []   # This will hold the QPixmap of the screenshot
+        self.api_thread = None  # Initialize an attribute to hold the thread
 
     def initUI(self):
         # Main layout container
@@ -137,6 +174,9 @@ class ChatApp(QMainWindow):
         central_widget.setLayout(main_layout)
         self.setCentralWidget(central_widget)
 
+        # Set the shortcut to the screenshot
+        shortcut = QShortcut(QKeySequence("Ctrl+P"), self)
+        shortcut.activated.connect(self.openScreenshotDialog)
 
     def openScreenshotDialog(self):
         self.screenshot_dialog = ScreenshotDialog()
@@ -168,10 +208,11 @@ class ChatApp(QMainWindow):
             # Prepare the data for the POST request
             data = {"text": message, "images": base64_images}
             
-            # Create and start a thread to send the request without freezing the UI
-            api_caller = APICaller('http://localhost:8000/chatGPT', data)
-            api_caller.response_received.connect(self.handleResponse)
-            api_caller.start()
+             # Instead of creating a local variable, assign the APICaller to the class attribute
+            self.api_thread = APICaller('http://localhost:8000/chatGPT', data)
+            self.api_thread.response_received.connect(self.handleResponse)
+            self.api_thread.finished.connect(self.api_thread.deleteLater)  # Ensure proper cleanup
+            self.api_thread.start()
 
             self.text_input.clear()
             self.clearImagePreviews()
@@ -184,6 +225,7 @@ class ChatApp(QMainWindow):
         else:
             # Handle error
             self.appendMessage("Error:", "Failed to get response from the server.")
+        self.api_thread = None 
 
     def clearImagePreviews(self):
         # Clear the preview area
