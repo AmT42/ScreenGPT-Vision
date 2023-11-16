@@ -58,6 +58,17 @@ OPEN_API_KEY=your-openai-key
    ```bash
    docker-compose up --build
    ```
+#### Run the Frontend
+1. Install PyQT5 to run the front
+    ```bash
+    pip install PyQt5==5.15.10
+    ```
+2. In a separate terminal, execute the following command:
+    ```bash
+    python GUI/app.py
+    ```
+
+
 #### Without Docker  
 1. **Install Requirements**
    ```bash
@@ -111,4 +122,6 @@ AmT42 - ahmet_celebi@hotmail.fr / https://www.linkedin.com/in/ahmet-celebi-973b6
 
 Project Link: https://github.com/AmT42/ScreenGPT-Vision
 
+    
+=======
     
