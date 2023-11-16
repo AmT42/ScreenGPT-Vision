@@ -1,13 +1,20 @@
-from fastapi import FastAPI, File, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, HTTPException
+from typing import List, Optional
+from app.services.LLM.gpt4_vision import chatgpt
+from app.db.schemas import ChatInput
 
 app = FastAPI()
 
+@app.post("/chatGPT")
+def chatGPT(user_input: ChatInput):
 
-@app.post("/upload_screenshot")
-async def upload_screenshot(file: UploadFile = File(...)):
-    # Save the screenshot to a file
-    with open("storage/screenshot.png", "wb") as buffer:
-        buffer.write(file.file.read())
+    # put input received from the front to the right format
+    input_data = chatgpt.format_input(user_input.text, user_input.images)
 
-    return JSONResponse(content={"message": "Screen shot received successfully"}, status_code=200)
+    # get gpt response
+    response_text = chatgpt.chat_with_gpt(input_data)
+
+    # add message to the chat history
+    chatgpt.construct_history(previous_output = response_text)
+    return {"response":response_text}
+
