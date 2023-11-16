@@ -135,9 +135,9 @@ class ScreenshotDialog(QDialog):
 
 
 class ChatApp(QMainWindow):
-
+    
     CHAT_DISPLAY_IMAGE_WIDTH = 200  # Width you want for the chat history images
-    CHAT_DISPLAY_IMAGE_HEIGHT = 150  #
+    CHAT_DISPLAY_IMAGE_HEIGHT = 150  # Height you want for the chat history images
 
     def __init__(self):
         super().__init__()
@@ -335,6 +335,25 @@ class ChatApp(QMainWindow):
 
 
     
+    # def appendMessage(self, prefix, message, images=None):
+    #     cursor = self.chat_display.textCursor()
+    #     cursor.movePosition(cursor.End)
+    #     self.chat_display.setTextCursor(cursor)
+        
+    #     # Insert text message if available
+    #     if message:
+    #         self.chat_display.insertPlainText(prefix + " " + message + "\n")
+        
+    #     # Insert images if available
+    #     if images:
+    #         for img in images:
+    #             cursor.insertImage(img.toImage())
+    #             cursor.insertText(" ")  # Add space after each image
+
+    #         self.chat_display.insertPlainText("\n")  # Add a newline after the last image
+
+    #     self.chat_display.ensureCursorVisible()
+
     def appendMessage(self, prefix, message, images=None):
         cursor = self.chat_display.textCursor()
         cursor.movePosition(cursor.End)
@@ -346,15 +365,15 @@ class ChatApp(QMainWindow):
         
         # Insert images if available
         if images:
-            for img in images:
-                cursor.insertImage(img.toImage())
+            for pixmap in images:
+                # Scale the pixmap for displaying in the chat history
+                chat_display_pixmap = pixmap.scaled(self.CHAT_DISPLAY_IMAGE_WIDTH, self.CHAT_DISPLAY_IMAGE_HEIGHT, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+                cursor.insertImage(chat_display_pixmap.toImage())
                 cursor.insertText(" ")  # Add space after each image
 
             self.chat_display.insertPlainText("\n")  # Add a newline after the last image
 
         self.chat_display.ensureCursorVisible()
-
-    
 def main():
     app = QApplication(sys.argv)
     chat_app = ChatApp()
