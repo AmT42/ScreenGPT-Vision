@@ -22,6 +22,26 @@ IMAGE_WIDTH = 160
 IMAGE_HEIGHT = 120
 IMAGE_SPACING = 10  # Space between images
 
+class ImageThumbnail(QWidget):
+    def __init__(self, pixmap, delete_callback, parent=None):
+        super().__init__(parent)
+        self.layout = QHBoxLayout(self)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+
+        self.image_label = QLabel()
+        self.image_label.setPixmap(pixmap)
+        self.layout.addWidget(self.image_label)
+
+        self.delete_button = QPushButton('❌')  # Using a simple 'X' as a delete symbol
+        self.delete_button.setFixedSize(16, 16)  # Set the size of the button
+        self.delete_button.clicked.connect(delete_callback)
+        self.layout.addWidget(self.delete_button)
+        self.layout.setAlignment(self.delete_button, Qt.AlignTop)
+
+    def on_delete_clicked(self):
+        self.setParent(None)
+        self.deleteLater()
+
 class APICaller(QThread):
     response_received = pyqtSignal(object)
      
@@ -37,6 +57,7 @@ class APICaller(QThread):
 class ScreenshotDialog(QDialog):
 
     screenshotTaken = pyqtSignal(QPixmap)
+    finished = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -88,18 +109,15 @@ class ScreenshotDialog(QDialog):
         self.close()  # Exit the screenshot mode
 
     def takeScreenshot(self):
-        # ... existing code to hide the dialog and process events ...
-        self.hide()
-        QGuiApplication.processEvents()
+        self.hide()  # Hide the screenshot dialog
+        QGuiApplication.processEvents()  # Process any pending events to ensure the dialog is hidden
 
         # Get the current screen based on the application's window
         current_screen = QGuiApplication.screenAt(self.pos())
 
         # Now we take the screenshot of the current screen
         screenshot = current_screen.grabWindow(0)
-        # Take a screenshot of the entire virtual desktop
-        # full_screenshot = QGuiApplication.primaryScreen().grabWindow(QApplication.desktop().winId())
-
+        
         # Translate the selection points to global coordinates
         global_begin = QApplication.desktop().mapToGlobal(self.begin)
         global_end = QApplication.desktop().mapToGlobal(self.end)
@@ -107,14 +125,20 @@ class ScreenshotDialog(QDialog):
         # Make a QRect from the two global points and normalize it
         selection_rect = QRect(global_begin, global_end).normalized()
 
-        # Crop the full_screenshot to the selection_rect
+        # Crop the screenshot to the selection_rect
         cropped = screenshot.copy(selection_rect)
-        self.screenshotTaken.emit(cropped)
-        self.show()  # Show the dialog again if needed
+        self.screenshotTaken.emit(cropped)  # Emit the signal with the cropped screenshot
+        self.finished.emit()  # Emit the finished signal
+        self.show()  # Show the screenshot dialog again if needed
+
         
 
 
 class ChatApp(QMainWindow):
+
+    CHAT_DISPLAY_IMAGE_WIDTH = 200  # Width you want for the chat history images
+    CHAT_DISPLAY_IMAGE_HEIGHT = 150  #
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle('Chat with GPT')
@@ -122,6 +146,9 @@ class ChatApp(QMainWindow):
         self.initUI()
         self.queued_images = []   # This will hold the QPixmap of the screenshot
         self.api_thread = None  # Initialize an attribute to hold the thread
+        self.loading_animation_timer = QTimer()  # Timer for loading animation
+        self.loading_animation_timer.timeout.connect(self.updateLoadingAnimation)
+        self.current_loading_text = ""  # Current text of the loading animation
 
     def initUI(self):
         # Main layout container
@@ -178,23 +205,52 @@ class ChatApp(QMainWindow):
         shortcut = QShortcut(QKeySequence("Ctrl+P"), self)
         shortcut.activated.connect(self.openScreenshotDialog)
 
+    # def openScreenshotDialog(self):
+    #     self.screenshot_dialog = ScreenshotDialog()
+    #     self.screenshot_dialog.screenshotTaken.connect(self.queueScreenshot)
+    #     self.screenshot_dialog.show()
+
     def openScreenshotDialog(self):
+        self.hide()  # Hide the main chat window
         self.screenshot_dialog = ScreenshotDialog()
         self.screenshot_dialog.screenshotTaken.connect(self.queueScreenshot)
+        self.screenshot_dialog.finished.connect(self.show)  # Re-show the main chat window after the screenshot dialog is finished
         self.screenshot_dialog.show()
 
+    # def queueScreenshot(self, pixmap):
+    #     # Ensure you're not adding a duplicate image
+    #     for existing_pixmap in self.queued_images:
+    #         if pixmap.toImage() == existing_pixmap.toImage():
+    #             return  # If the pixmap already exists in the queue, don't add it again
 
+    #     normalized_pixmap = pixmap.scaled(IMAGE_WIDTH, IMAGE_HEIGHT, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+    #     thumbnail_widget = ImageThumbnail(normalized_pixmap, self.deleteImage)
+    #     self.image_preview_layout.addWidget(thumbnail_widget)
+    #     self.queued_images.append(normalized_pixmap)
+    #     thumbnail_widget.show()  # Make sure to call show on the widget
+    
     def queueScreenshot(self, pixmap):
-        # Scale the screenshot to a standard size
-        normalized_pixmap = pixmap.scaled(IMAGE_WIDTH, IMAGE_HEIGHT, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
-        self.queued_images.append(normalized_pixmap)
+        # Store the original pixmap in the queue, not the scaled version
+        self.queued_images.append(pixmap)
 
-        # Create a label for the thumbnail, set a fixed size to avoid different sizes being displayed
-        label = QLabel()
-        label.setPixmap(normalized_pixmap)
-        label.setFixedSize(IMAGE_WIDTH + IMAGE_SPACING, IMAGE_HEIGHT)  # Include spacing in fixed size
-        label.setStyleSheet(f"margin-right: {IMAGE_SPACING}px;")  # Add spacing between thumbnails
-        self.image_preview_layout.addWidget(label)
+        # Scale the pixmap for displaying as a thumbnail in the UI
+        thumbnail_pixmap = pixmap.scaled(IMAGE_WIDTH, IMAGE_HEIGHT, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+        thumbnail_widget = ImageThumbnail(thumbnail_pixmap, self.deleteImage)
+        self.image_preview_layout.addWidget(thumbnail_widget)
+        thumbnail_widget.show()
+
+    def deleteImage(self):
+        button = self.sender()
+        if button:
+            # Find the parent widget, which is the ImageThumbnail, and delete it
+            thumbnail_widget = button.parent()
+            index = self.image_preview_layout.indexOf(thumbnail_widget)
+            self.image_preview_layout.takeAt(index)
+            thumbnail_widget.deleteLater()
+            # Also remove the pixmap from the queued_images list
+            if thumbnail_widget.image_label.pixmap() in self.queued_images:
+                self.queued_images.remove(thumbnail_widget.image_label.pixmap())
+
 
     def sendMessage(self):
         message = self.text_input.text().strip()
@@ -203,11 +259,15 @@ class ChatApp(QMainWindow):
             self.appendMessage("You:", message, self.queued_images)
             
             # Convert queued images to base64 strings
-            base64_images = [pixmap_to_base64(img) for img in self.queued_images]
+            base64_images = [pixmap_to_base64(pixmap) for pixmap in self.queued_images]
+
 
             # Prepare the data for the POST request
             data = {"text": message, "images": base64_images}
-            
+
+            self.send_button.setEnabled(False)  # Disable the send button
+            self.startLoadingAnimation()  # Start the loading animation
+
              # Instead of creating a local variable, assign the APICaller to the class attribute
             self.api_thread = APICaller('http://localhost:8000/chatGPT', data)
             self.api_thread.response_received.connect(self.handleResponse)
@@ -218,13 +278,51 @@ class ChatApp(QMainWindow):
             self.clearImagePreviews()
             self.queued_images = []  # Clear the image queue
 
+    def startLoadingAnimation(self):
+        self.current_loading_text = "GPT: thinking"
+        self.loading_animation_timer.start(500)  # Update the animation every 500ms
+
+    def updateLoadingAnimation(self):
+        # Simply update the number of dots for the loading animation
+        num_dots = (len(self.current_loading_text) - len("GPT: thinking")) % 3 + 1
+        self.current_loading_text = "GPT: thinking" + "." * num_dots
+        self.updateChatDisplayWithLoadingText()
+
+    def updateChatDisplayWithLoadingText(self):
+        cursor = self.chat_display.textCursor()
+        cursor.beginEditBlock()
+        cursor.movePosition(cursor.End)
+        # Move the cursor to the start of the line where "GPT: thinking" starts
+        cursor.movePosition(cursor.StartOfLine, cursor.KeepAnchor)
+        # Check if the current line contains "GPT: thinking"
+        if "GPT: thinking" in cursor.selectedText():
+            # If so, remove only the "GPT: thinking..." part
+            cursor.removeSelectedText()
+            cursor.insertText(self.current_loading_text)
+        else:
+            # If not, it means this is the first frame of the animation
+            # Insert the initial loading text without a newline
+            cursor.insertText(self.current_loading_text)
+        cursor.endEditBlock()
+        self.chat_display.ensureCursorVisible()
+
     def handleResponse(self, response):
+        self.send_button.setEnabled(True)  # Re-enable the send button
+        self.loading_animation_timer.stop()  # Stop the loading animation
+
+        # Clear the loading text before displaying the response
+        cursor = self.chat_display.textCursor()
+        cursor.movePosition(cursor.End)
+        cursor.select(cursor.LineUnderCursor)
+        cursor.removeSelectedText()
+
         if response.status_code == 200:
             # Append response to chat display
             self.appendMessage("GPT:", response.json()["response"])
         else:
             # Handle error
             self.appendMessage("Error:", "Failed to get response from the server.")
+
         self.api_thread = None 
 
     def clearImagePreviews(self):
@@ -256,7 +354,7 @@ class ChatApp(QMainWindow):
 
         self.chat_display.ensureCursorVisible()
 
-
+    
 def main():
     app = QApplication(sys.argv)
     chat_app = ChatApp()
