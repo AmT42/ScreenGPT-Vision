@@ -53,8 +53,8 @@ Inside the ScreenGPT-Vision directory, create a file named .env.
 Open your new .env file with your favorite text editor and add the following line:
 OPEN_API_KEY=your-openai-key
 
-#### Using Docker  
-Run docker compose
+#### With Docker  
+1. **Run docker compose**
    ```bash
    docker-compose up --build
    ```
@@ -64,7 +64,6 @@ Run docker compose
    pip install -r requirements.txt
    ```
 2. **Start the Backend**
-   In a separate terminal,
    ```bash
    uvicorn app.main:app --reload
    ```
@@ -97,12 +96,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 If you end up using GPT Vision Chat in your work, a shoutout would be super cool:
 
 ```bibtex
-  @misc{gpt_vision_chat,
-    author = "Your Cool Alias",
+  @misc{ScreenGPT-Vision,
+    author = "AmT42",
     title = "GPT Vision Chat for Desktop",
     year = "2023",
-    howpublished = {GitHub repository},
-    url = "https://github.com/your-github-username/gpt_vision"
+    url = "https://github.com/AmT42/ScreenGPT-Vision"
   }
   ```
 
@@ -111,6 +109,6 @@ If you end up using GPT Vision Chat in your work, a shoutout would be super cool
 AmT42 - ahmet_celebi@hotmail.fr / https://www.linkedin.com/in/ahmet-celebi-973b63197/
 
 
-Project Link: [https://github.com/your-username/gpt_vision](https://github.com/your-username/gpt_vision)   
+Project Link: https://github.com/AmT42/ScreenGPT-Vision
 
     
