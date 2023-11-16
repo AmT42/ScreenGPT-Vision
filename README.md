@@ -68,6 +68,7 @@ OPEN_API_KEY=your-openai-key
     python GUI/app.py
     ```
 
+
 #### Without Docker  
 1. **Install Requirements**
    ```bash
@@ -121,4 +122,6 @@ AmT42 - ahmet_celebi@hotmail.fr / https://www.linkedin.com/in/ahmet-celebi-973b6
 
 Project Link: https://github.com/AmT42/ScreenGPT-Vision
 
+    
+=======
     
