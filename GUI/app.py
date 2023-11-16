@@ -23,8 +23,9 @@ IMAGE_HEIGHT = 120
 IMAGE_SPACING = 10  # Space between images
 
 class ImageThumbnail(QWidget):
-    def __init__(self, pixmap, delete_callback, parent=None):
+    def __init__(self, pixmap, original_pixmap, delete_callback, parent=None):
         super().__init__(parent)
+        self.original_pixmap = original_pixmap  # Store the original pixmap
         self.layout = QHBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
 
@@ -205,11 +206,6 @@ class ChatApp(QMainWindow):
         shortcut = QShortcut(QKeySequence("Ctrl+P"), self)
         shortcut.activated.connect(self.openScreenshotDialog)
 
-    # def openScreenshotDialog(self):
-    #     self.screenshot_dialog = ScreenshotDialog()
-    #     self.screenshot_dialog.screenshotTaken.connect(self.queueScreenshot)
-    #     self.screenshot_dialog.show()
-
     def openScreenshotDialog(self):
         self.hide()  # Hide the main chat window
         self.screenshot_dialog = ScreenshotDialog()
@@ -217,27 +213,38 @@ class ChatApp(QMainWindow):
         self.screenshot_dialog.finished.connect(self.show)  # Re-show the main chat window after the screenshot dialog is finished
         self.screenshot_dialog.show()
 
-    # def queueScreenshot(self, pixmap):
-    #     # Ensure you're not adding a duplicate image
-    #     for existing_pixmap in self.queued_images:
-    #         if pixmap.toImage() == existing_pixmap.toImage():
-    #             return  # If the pixmap already exists in the queue, don't add it again
-
-    #     normalized_pixmap = pixmap.scaled(IMAGE_WIDTH, IMAGE_HEIGHT, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
-    #     thumbnail_widget = ImageThumbnail(normalized_pixmap, self.deleteImage)
-    #     self.image_preview_layout.addWidget(thumbnail_widget)
-    #     self.queued_images.append(normalized_pixmap)
-    #     thumbnail_widget.show()  # Make sure to call show on the widget
     
+    # def queueScreenshot(self, pixmap):
+    #     # Store the original pixmap in the queue, not the scaled version
+    #     self.queued_images.append(pixmap)
+
+    #     # Scale the pixmap for displaying as a thumbnail in the UI
+    #     thumbnail_pixmap = pixmap.scaled(IMAGE_WIDTH, IMAGE_HEIGHT, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+    #     thumbnail_widget = ImageThumbnail(thumbnail_pixmap, self.deleteImage)
+    #     self.image_preview_layout.addWidget(thumbnail_widget)
+    #     thumbnail_widget.show()
+
     def queueScreenshot(self, pixmap):
-        # Store the original pixmap in the queue, not the scaled version
+    # Store the original pixmap in the queue, not the scaled version
         self.queued_images.append(pixmap)
 
         # Scale the pixmap for displaying as a thumbnail in the UI
         thumbnail_pixmap = pixmap.scaled(IMAGE_WIDTH, IMAGE_HEIGHT, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
-        thumbnail_widget = ImageThumbnail(thumbnail_pixmap, self.deleteImage)
+        thumbnail_widget = ImageThumbnail(thumbnail_pixmap, pixmap, self.deleteImage)  # Pass the original pixmap here
         self.image_preview_layout.addWidget(thumbnail_widget)
         thumbnail_widget.show()
+
+    # def deleteImage(self):
+    #     button = self.sender()
+    #     if button:
+    #         # Find the parent widget, which is the ImageThumbnail, and delete it
+    #         thumbnail_widget = button.parent()
+    #         index = self.image_preview_layout.indexOf(thumbnail_widget)
+    #         self.image_preview_layout.takeAt(index)
+    #         thumbnail_widget.deleteLater()
+    #         # Also remove the pixmap from the queued_images list
+    #         if thumbnail_widget.image_label.pixmap() in self.queued_images:
+    #             self.queued_images.remove(thumbnail_widget.image_label.pixmap())
 
     def deleteImage(self):
         button = self.sender()
@@ -245,12 +252,14 @@ class ChatApp(QMainWindow):
             # Find the parent widget, which is the ImageThumbnail, and delete it
             thumbnail_widget = button.parent()
             index = self.image_preview_layout.indexOf(thumbnail_widget)
+            
+            # Remove the pixmap from the queued_images list
+            if thumbnail_widget.original_pixmap in self.queued_images:
+                self.queued_images.remove(thumbnail_widget.original_pixmap)
+
+            # Now remove the thumbnail widget from the layout and delete it
             self.image_preview_layout.takeAt(index)
             thumbnail_widget.deleteLater()
-            # Also remove the pixmap from the queued_images list
-            if thumbnail_widget.image_label.pixmap() in self.queued_images:
-                self.queued_images.remove(thumbnail_widget.image_label.pixmap())
-
 
     def sendMessage(self):
         message = self.text_input.text().strip()
@@ -334,25 +343,6 @@ class ChatApp(QMainWindow):
                 widget_to_remove.setParent(None)
 
 
-    
-    # def appendMessage(self, prefix, message, images=None):
-    #     cursor = self.chat_display.textCursor()
-    #     cursor.movePosition(cursor.End)
-    #     self.chat_display.setTextCursor(cursor)
-        
-    #     # Insert text message if available
-    #     if message:
-    #         self.chat_display.insertPlainText(prefix + " " + message + "\n")
-        
-    #     # Insert images if available
-    #     if images:
-    #         for img in images:
-    #             cursor.insertImage(img.toImage())
-    #             cursor.insertText(" ")  # Add space after each image
-
-    #         self.chat_display.insertPlainText("\n")  # Add a newline after the last image
-
-    #     self.chat_display.ensureCursorVisible()
 
     def appendMessage(self, prefix, message, images=None):
         cursor = self.chat_display.textCursor()
