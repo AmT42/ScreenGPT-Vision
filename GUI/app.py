@@ -1,10 +1,11 @@
 import sys
 import requests
 from PyQt5.QtCore import Qt, QRect, QPoint, pyqtSignal, QObject, QByteArray, QBuffer, QThread, QTimer
-from PyQt5.QtGui import QPixmap, QPainter, QPen, QIcon, QGuiApplication, QImage, QKeySequence
+from PyQt5.QtGui import QPixmap, QPainter, QPen, QIcon, QGuiApplication, QImage, QKeySequence, QBrush, QColor
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QPushButton, QTextEdit, QDialog, QVBoxLayout,
                              QLabel, QWidget, QHBoxLayout, QLineEdit, QScrollArea, QShortcut)
 import base64
+import platform
 
 def pixmap_to_base64(pixmap):
     byte_array = QByteArray()
@@ -62,8 +63,13 @@ class ScreenshotDialog(QDialog):
 
     def __init__(self):
         super().__init__()
-        self.setWindowFlags(Qt.WindowStaysOnTopHint)
-        self.setAttribute(Qt.WA_TranslucentBackground)
+        if platform.system() == "Windows":
+            self.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
+            self.setAttribute(Qt.WA_TranslucentBackground)
+            self.setStyleSheet("background:transparent;")
+        else:
+            self.setWindowFlags(Qt.WindowStaysOnTopHint)
+            self.setAttribute(Qt.WA_TranslucentBackground)
         self.setWindowState(self.windowState() | Qt.WindowFullScreen)
         self.begin = QPoint()
         self.end = QPoint()
@@ -79,13 +85,14 @@ class ScreenshotDialog(QDialog):
 
 
     def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.fillRect(event.rect(), QBrush(QColor(0, 0, 0, 128)))  # Semi-transparent background
         if self.is_selecting:
-            qp = QPainter(self)
-            qp.setPen(QPen(Qt.red, 2, Qt.SolidLine))
-            qp.setBrush(Qt.transparent)
-            # Directly use local_begin and local_end without translating from global
+            pen = QPen(Qt.red, 2)
+            painter.setPen(pen)
             rect = QRect(self.begin, self.end).normalized()
-            qp.drawRect(rect)
+            painter.drawRect(rect)
 
     def mousePressEvent(self, event):
         self.begin = event.pos()
