@@ -24,15 +24,6 @@ class ChatGPT:
         self.chat_history = [{"role": "system", "content": self.base_context}]
         self.model = model
 
-    # @staticmethod
-    # def format_input(input):
-    #     input_content = {"role": "user", "content": [{"type": "text", "text": input[0]}]}
-        
-    #     if len(input) > 1:
-    #         images_content = [{"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64 {img}"}} for img in input[1:]]
-    #         input_content["content"].extend(images_content)
-
-    #     return input_content
     
     def format_input(self, text, images = None):
         input_content = {"role":"user", "content":[]}

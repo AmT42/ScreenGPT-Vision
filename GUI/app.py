@@ -69,10 +69,13 @@ class ScreenshotDialog(QDialog):
         self.end = QPoint()
         self.is_selecting = False
 
-    # def showEvent(self, event):
-    #     super().showEvent(event)
-    #     self.activateWindow()  # Make sure the window is active
-    #     self.raise_()   
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.activateWindow()
+        self.raise_()
+        current_screen = QApplication.screenAt(self.geometry().center())
+        print(f"Dialog shown on screen: {current_screen.name()}")
+        self.setGeometry(current_screen.geometry())
 
 
     def paintEvent(self, event):
@@ -80,16 +83,8 @@ class ScreenshotDialog(QDialog):
             qp = QPainter(self)
             qp.setPen(QPen(Qt.red, 2, Qt.SolidLine))
             qp.setBrush(Qt.transparent)
-            
-            # Translate the coordinates relative to the virtual desktop
-            global_begin = QApplication.desktop().mapToGlobal(self.begin)
-            global_end = QApplication.desktop().mapToGlobal(self.end)
-
-            # Since the dialog is full screen, map back from global to local
-            local_begin = self.mapFromGlobal(global_begin)
-            local_end = self.mapFromGlobal(global_end)
-            
-            rect = QRect(local_begin, local_end).normalized()
+            # Directly use local_begin and local_end without translating from global
+            rect = QRect(self.begin, self.end).normalized()
             qp.drawRect(rect)
 
     def mousePressEvent(self, event):

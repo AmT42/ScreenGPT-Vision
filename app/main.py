@@ -8,14 +8,13 @@ app = FastAPI()
 @app.post("/chatGPT")
 def chatGPT(user_input: ChatInput):
 
-    # No need to decode the images
-    print("text", user_input.text)
-    print("image", user_input.images)
+    # put input received from the front to the right format
     input_data = chatgpt.format_input(user_input.text, user_input.images)
-    print("-"*220, input_data)
 
+    # get gpt response
     response_text = chatgpt.chat_with_gpt(input_data)
+
+    # add message to the chat history
     chatgpt.construct_history(previous_output = response_text)
-    print(response_text)
     return {"response":response_text}
 
