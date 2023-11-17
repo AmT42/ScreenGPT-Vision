@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QPushButton, QTextEdit, 
                              QLabel, QWidget, QHBoxLayout, QLineEdit, QScrollArea, QShortcut)
 import base64
 import platform
+import markdown
 
 def pixmap_to_base64(pixmap):
     byte_array = QByteArray()
@@ -34,9 +35,11 @@ class ImageThumbnail(QWidget):
         self.image_label.setPixmap(pixmap)
         self.layout.addWidget(self.image_label)
 
-        self.delete_button = QPushButton('❌')  # Using a simple 'X' as a delete symbol
-        self.delete_button.setFixedSize(16, 16)  # Set the size of the button
+        self.delete_button = QPushButton('❌')
+        self.delete_button.setFixedSize(16, 16)
         self.delete_button.clicked.connect(delete_callback)
+        self.delete_button.setStyleSheet("QPushButton { background-color: red; color: white; border-radius: 8px; }")
+        
         self.layout.addWidget(self.delete_button)
         self.layout.setAlignment(self.delete_button, Qt.AlignTop)
 
@@ -136,7 +139,16 @@ class ScreenshotDialog(QDialog):
 
         
 
-
+class MultiLineTextEdit(QTextEdit):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Return and event.modifiers() & Qt.ControlModifier:
+            self.insertPlainText("\n")  # Insert a newline character
+        else:
+            super().keyPressEvent(event)  # Handle the default key press event
+            
 class ChatApp(QMainWindow):
     
     CHAT_DISPLAY_IMAGE_WIDTH = 200  # Width you want for the chat history images
@@ -160,6 +172,7 @@ class ChatApp(QMainWindow):
         # Chat display area
         self.chat_display = QTextEdit()
         self.chat_display.setReadOnly(True)
+        self.chat_display.setStyleSheet("QTextEdit { border: none; padding: 5px; background-color: #FFFFFF; }")
         main_layout.addWidget(self.chat_display)
 
         # Horizontal layout for image previews
@@ -180,18 +193,35 @@ class ChatApp(QMainWindow):
         self.image_preview_scroll_area.setFixedHeight(120)
         main_layout.addWidget(self.image_preview_scroll_area)
 
-        # Text input for messages
-        self.text_input = QLineEdit()
-        self.text_input.setPlaceholderText('Type your message here...')
-        main_layout.addWidget(self.text_input)
+        # # Text input for messages
+        # self.text_input = QLineEdit()
+        # self.text_input.setPlaceholderText('Type your message here...')
+        # self.text_input.setStyleSheet("QLineEdit { border: 2px solid #A3C1DA; border-radius: 4px; padding: 5px; }")
+        # main_layout.addWidget(self.text_input)
 
+        # Use a QTextEdit instead of QLineEdit for multi-line input
+        self.text_input = MultiLineTextEdit()
+        self.text_input.setPlaceholderText('Type your message here...')
+        self.text_input.setStyleSheet(
+            "MultiLineTextEdit { border: 2px solid #A3C1DA; border-radius: 4px; padding: 5px; }"
+        )
+        self.text_input.setMaximumHeight(68)  # Set maximum height to display 3 lines
+        main_layout.addWidget(self.text_input)
+        
         # Send button
         self.send_button = QPushButton('Send')
         self.send_button.clicked.connect(self.sendMessage)
+        self.send_button.setStyleSheet("QPushButton { background-color: #A3C1DA; border: none; padding: 6px; border-radius: 3px; }"
+                                   "QPushButton:disabled { background-color: #D3D3D3; }")
+        
+        # Set the shortcut for sending messages with Ctrl+Enter
+        send_shortcut = QShortcut(QKeySequence("Ctrl+W"), self.text_input)
+        send_shortcut.activated.connect(self.sendMessage)
         
         # Screenshot button
         self.screenshot_button = QPushButton('Screenshot')
         self.screenshot_button.clicked.connect(self.openScreenshotDialog)
+        self.screenshot_button.setStyleSheet("QPushButton { background-color: #A3C1DA; border: none; padding: 6px; border-radius: 3px; }")
         
         # Layout for buttons
         button_layout = QHBoxLayout()
@@ -207,6 +237,22 @@ class ChatApp(QMainWindow):
         # Set the shortcut to the screenshot
         shortcut = QShortcut(QKeySequence("Ctrl+P"), self)
         shortcut.activated.connect(self.openScreenshotDialog)
+        
+    def style_message(self, sender, message):
+        # Define bold style for the sender's name
+        sender_style = "font-weight: bold;"
+
+        # Construct the HTML for the styled message
+        styled_message = f"<div><span style='{sender_style}'>{sender}</span> {message}</div>"
+
+        return styled_message
+
+
+    
+    def markdown_to_html(self, markdown_text):
+        # Note that 'fenced_code' is part of the 'extra' extension in Python-Markdown
+        html = markdown.markdown(markdown_text, extensions=['extra', 'codehilite', 'nl2br'])
+        return html
 
     def openScreenshotDialog(self):
         self.hide()  # Hide the main chat window
@@ -215,16 +261,6 @@ class ChatApp(QMainWindow):
         self.screenshot_dialog.finished.connect(self.show)  # Re-show the main chat window after the screenshot dialog is finished
         self.screenshot_dialog.show()
 
-    
-    # def queueScreenshot(self, pixmap):
-    #     # Store the original pixmap in the queue, not the scaled version
-    #     self.queued_images.append(pixmap)
-
-    #     # Scale the pixmap for displaying as a thumbnail in the UI
-    #     thumbnail_pixmap = pixmap.scaled(IMAGE_WIDTH, IMAGE_HEIGHT, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
-    #     thumbnail_widget = ImageThumbnail(thumbnail_pixmap, self.deleteImage)
-    #     self.image_preview_layout.addWidget(thumbnail_widget)
-    #     thumbnail_widget.show()
 
     def queueScreenshot(self, pixmap):
     # Store the original pixmap in the queue, not the scaled version
@@ -235,18 +271,6 @@ class ChatApp(QMainWindow):
         thumbnail_widget = ImageThumbnail(thumbnail_pixmap, pixmap, self.deleteImage)  # Pass the original pixmap here
         self.image_preview_layout.addWidget(thumbnail_widget)
         thumbnail_widget.show()
-
-    # def deleteImage(self):
-    #     button = self.sender()
-    #     if button:
-    #         # Find the parent widget, which is the ImageThumbnail, and delete it
-    #         thumbnail_widget = button.parent()
-    #         index = self.image_preview_layout.indexOf(thumbnail_widget)
-    #         self.image_preview_layout.takeAt(index)
-    #         thumbnail_widget.deleteLater()
-    #         # Also remove the pixmap from the queued_images list
-    #         if thumbnail_widget.image_label.pixmap() in self.queued_images:
-    #             self.queued_images.remove(thumbnail_widget.image_label.pixmap())
 
     def deleteImage(self):
         button = self.sender()
@@ -264,7 +288,7 @@ class ChatApp(QMainWindow):
             thumbnail_widget.deleteLater()
 
     def sendMessage(self):
-        message = self.text_input.text().strip()
+        message = self.text_input.toPlainText().strip()  
         if message or self.queued_images:
             # Display the user's message and images in the chat
             self.appendMessage("You:", message, self.queued_images)
@@ -345,27 +369,80 @@ class ChatApp(QMainWindow):
                 widget_to_remove.setParent(None)
 
 
+    def pixmap_to_html(self, pixmap):
+        """
+        Converts a QPixmap object into an HTML img tag string with a base64-encoded source.
+        """
+        byte_array = QByteArray()
+        buffer = QBuffer(byte_array)
+        buffer.open(QBuffer.WriteOnly)
+        pixmap.save(buffer, "PNG")  # Save the pixmap into the buffer as PNG
+        base64_data = base64.b64encode(byte_array.data()).decode("utf-8")
+        return f'<img src="data:image/png;base64,{base64_data}"/>'
+    
+            
+    # def appendMessage(self, prefix, message, images=None):
+    #     cursor = self.chat_display.textCursor()
+    #     cursor.movePosition(cursor.End)
+    #     self.chat_display.setTextCursor(cursor)
+        
+    #     # Insert text message if available
+    #     if message:
+    #         # Convert markdown to HTML and style the message
+    #         message_html = self.markdown_to_html(message)
+    #         styled_message = self.style_message(prefix, message_html)
+    #         self.chat_display.insertHtml(styled_message + "<br>")  # Ensure it ends with a new line
+        
+    #     # Insert images if available
+    #     if images:
+    #         for pixmap in images:
+    #             # Scale the pixmap for displaying in the chat history
+    #             scaled_pixmap  = pixmap.scaled(self.CHAT_DISPLAY_IMAGE_WIDTH, self.CHAT_DISPLAY_IMAGE_HEIGHT, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+    #             # cursor.insertImage(chat_display_pixmap.toImage())
+    #             image_html = self.pixmap_to_html(scaled_pixmap)
+    #             cursor.insertHtml(image_html)
+    #             cursor.insertText(" ")  # Add space after each image
 
+    #         self.chat_display.insertPlainText("\n")  # Add a newline after the last image
+
+    #     self.chat_display.ensureCursorVisible()
+        
     def appendMessage(self, prefix, message, images=None):
         cursor = self.chat_display.textCursor()
         cursor.movePosition(cursor.End)
         self.chat_display.setTextCursor(cursor)
         
-        # Insert text message if available
-        if message:
-            self.chat_display.insertPlainText(prefix + " " + message + "\n")
-        
-        # Insert images if available
+        # Insert the sender's label
+        if prefix:
+            styled_prefix = self.style_message(prefix, "")  # Style the prefix
+            self.chat_display.insertHtml(styled_prefix)  # Insert the styled prefix
+            
+        # Insert images if available, right after the sender's label
         if images:
+            self.chat_display.insertPlainText("\n")  # Add a newline after the last image
             for pixmap in images:
                 # Scale the pixmap for displaying in the chat history
-                chat_display_pixmap = pixmap.scaled(self.CHAT_DISPLAY_IMAGE_WIDTH, self.CHAT_DISPLAY_IMAGE_HEIGHT, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
-                cursor.insertImage(chat_display_pixmap.toImage())
+                scaled_pixmap = pixmap.scaled(self.CHAT_DISPLAY_IMAGE_WIDTH, self.CHAT_DISPLAY_IMAGE_HEIGHT, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+                # Convert pixmap to HTML and insert
+                image_html = self.pixmap_to_html(scaled_pixmap)
+                cursor.insertHtml(image_html)
                 cursor.insertText(" ")  # Add space after each image
-
             self.chat_display.insertPlainText("\n")  # Add a newline after the last image
-
+            
+        # Insert text message if available, after the images
+        if message:
+            message_html = self.markdown_to_html(message)
+            styled_message = self.style_message("", message_html)  # Style the message
+            self.chat_display.insertHtml(styled_message)  # Insert the styled message
+            self.chat_display.insertPlainText("\n")  # Add a newline after the last image
+            # message_html = markdown.markdown(message, extensions=['extra', 'codehilite', 'nl2br'])
+            # styled_message = self.style_message("", message_html)  # Style the message
+            # self.chat_display.insertHtml(styled_message) 
+            # self.chat_display.insertPlainText("\n")  # Add a newline after the last image 
+        
+        self.chat_display.insertHtml("<br>")  # Ensure separation after the message block
         self.chat_display.ensureCursorVisible()
+            
 def main():
     app = QApplication(sys.argv)
     chat_app = ChatApp()
