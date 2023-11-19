@@ -31,16 +31,24 @@ Doesn't support MacOs
 
 ## Watch It in Action! 📹
 
+## Watch It in Action! 📹
+
 Curious to see ScreenGPT-Vision in action? I've put together some screenshots to show you just how easy and fun it is to use:
 
-![Locate Object on Screen Demo](images/locate_folder.png)
-![Ask question about graphs](images/vit_paper.png)
-![Get LaTeX of math equations](images/LaTeX.png)
-![Get guided to build your landing page](images/landing_page.png)
+### Locate Object on Screen Demo
+<img src="images/locate_folder.png" width="400px" alt="Locate Object on Screen Demo">
 
-Just take a look at the screenshots above to get a glimpse of the app in action.
+### Ask Question About Graphs
+<img src="images/vit_paper.png" width="400px" alt="Ask Question About Graphs">
 
-Just click on the links above to watch the videos on YouTube. Don't forget to like and subscribe for more updates!
+### Get LaTeX of Math Equations
+<img src="images/LaTeX.png" width="400px" alt="Get LaTeX of Math Equations">
+
+### Get Guided to Build Your Landing Page
+<img src="images/landing_page.png" width="400px" alt="Get Guided to Build Your Landing Page">
+
+Each image is a snapshot of the app in use, showcasing the various features in action.
+
 
 
 ## How to Get It Rolling 🛠️
