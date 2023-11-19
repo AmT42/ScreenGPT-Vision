@@ -31,7 +31,7 @@ Doesn't support MacOs
 
 ## Watch It in Action! 📹
 
-Curious to see ScreenGPT-Vision in action? I've put together a couple of quick demos to show you just how easy and fun it is to use:
+Curious to see ScreenGPT-Vision in action ? I've put together a couple of quick demos to show you just how easy and fun it is to use:
 
 - ![Locate Object on Screen Demo](videos/locate_folder.mp4)
 - ![Ask question about graphs](videos/graph_vit.mp4)
