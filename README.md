@@ -13,7 +13,7 @@ Ever been knee-deep in work and stumbled upon an error message as cryptic as an 
 - **Chat with GPT-4**: Just type in your question and voilà – wisdom from GPT-4.
 - **Screenshot Magic**: Capture your screen's content and let GPT-4 do the heavy lifting.
 - **Lazy Loading**: Queue up those screenshots and fire away all your queries at once.
-- **Shortcut Simplicity**: Hit Ctrl+P and your screenshot is ready to be analyzed.
+- **Shortcut Simplicity**: Hit Ctrl+Shift + P and your screenshot is ready to be analyzed. Ctrl + W to quickly send your messages.
 - **Feather-Light**: A minimalist app that's easy on your machine.
 
 ## The Backstory 📚
@@ -61,7 +61,7 @@ OPEN_API_KEY=your-openai-key
 #### Run the Frontend
 1. Install PyQT5 to run the front
     ```bash
-    pip install PyQt5==5.15.10
+    pip install -r requirements_GUI.txt
     ```
 2. In a separate terminal, execute the following command:
     ```bash

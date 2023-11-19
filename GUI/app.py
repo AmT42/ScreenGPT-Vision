@@ -7,7 +7,6 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QPushButton, QTextEdit, 
 import base64
 import platform
 import markdown
-import os 
 
 import sys
 import threading
@@ -43,7 +42,7 @@ class ImageThumbnail(QWidget):
         self.delete_button = QPushButton('❌')
         self.delete_button.setFixedSize(16, 16)
         self.delete_button.clicked.connect(delete_callback)
-        self.delete_button.setStyleSheet("QPushButton { background-color: red; color: white; border-radius: 8px; }")
+        self.delete_button.setStyleSheet("QPushButton { color: white; border-radius: 8px; }")
         
         self.layout.addWidget(self.delete_button)
         self.layout.setAlignment(self.delete_button, Qt.AlignTop)
@@ -68,7 +67,8 @@ class ScreenshotDialog(QDialog):
 
     screenshotTaken = pyqtSignal(QPixmap)
     finished = pyqtSignal()
-
+    screenshotProcessFinished = pyqtSignal()  # New signal
+    
     def __init__(self):
         super().__init__()
         if platform.system() == "Windows":
@@ -140,6 +140,7 @@ class ScreenshotDialog(QDialog):
         cropped = screenshot.copy(selection_rect)
         self.screenshotTaken.emit(cropped)  # Emit the signal with the cropped screenshot
         self.finished.emit()  # Emit the finished signal
+        self.screenshotProcessFinished.emit()  # Emit the signal after taking the screenshot
         self.show()  # Show the screenshot dialog again if needed
 
         
@@ -259,7 +260,7 @@ class ChatApp(QMainWindow):
             # Emit the custom signal
             self.takeScreenshotSignal.emit()
 
-        keyboard.add_hotkey('ctrl+shift+p', take_screenshot)
+        keyboard.add_hotkey('ctrl+shift+q', take_screenshot)
         keyboard.wait()  # This will block the thread, waiting for keyboard events
         
     # def initScreenshotListener(self):
@@ -293,9 +294,13 @@ class ChatApp(QMainWindow):
         self.screenshot_dialog = ScreenshotDialog()
         self.screenshot_dialog.screenshotTaken.connect(self.queueScreenshot)
         self.screenshot_dialog.finished.connect(self.show)  # Re-show the main chat window after the screenshot dialog is finished
+        self.screenshot_dialog.screenshotProcessFinished.connect(self.bringToFront)
         self.screenshot_dialog.show()
 
-
+    def bringToFront(self):
+        self.showNormal()  # Show and bring the window to the front
+        self.activateWindow()  # Make the window the active window
+        
     def queueScreenshot(self, pixmap):
     # Store the original pixmap in the queue, not the scaled version
         self.queued_images.append(pixmap)
