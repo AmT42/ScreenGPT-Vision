@@ -7,6 +7,11 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QPushButton, QTextEdit, 
 import base64
 import platform
 import markdown
+import os 
+
+import sys
+import threading
+import keyboard
 
 def pixmap_to_base64(pixmap):
     byte_array = QByteArray()
@@ -153,7 +158,8 @@ class ChatApp(QMainWindow):
     
     CHAT_DISPLAY_IMAGE_WIDTH = 200  # Width you want for the chat history images
     CHAT_DISPLAY_IMAGE_HEIGHT = 150  # Height you want for the chat history images
-
+    takeScreenshotSignal = pyqtSignal()
+    
     def __init__(self):
         super().__init__()
         self.setWindowTitle('Chat with GPT')
@@ -237,6 +243,34 @@ class ChatApp(QMainWindow):
         # Set the shortcut to the screenshot
         shortcut = QShortcut(QKeySequence("Ctrl+P"), self)
         shortcut.activated.connect(self.openScreenshotDialog)
+        
+        self.takeScreenshotSignal.connect(self.openScreenshotDialog)
+        self.startBackgroundListener()
+        
+    #     self.initScreenshotListener()
+    
+    def startBackgroundListener(self):
+        # Start the background listener in a new thread
+        listener_thread = threading.Thread(target=self.backgroundListener, daemon=True)
+        listener_thread.start()
+
+    def backgroundListener(self):
+        def take_screenshot():
+            # Emit the custom signal
+            self.takeScreenshotSignal.emit()
+
+        keyboard.add_hotkey('ctrl+shift+p', take_screenshot)
+        keyboard.wait()  # This will block the thread, waiting for keyboard events
+        
+    # def initScreenshotListener(self):
+    #     self.screenshot_timer = QTimer(self)
+    #     self.screenshot_timer.timeout.connect(self.checkForScreenshotSignal)
+    #     self.screenshot_timer.start(1000)  # Check every second
+
+    # def checkForScreenshotSignal(self):
+    #     if os.path.exists("screenshot_flag.txt"):
+    #         self.openScreenshotDialog()
+    #         os.remove("screenshot_flag.txt")  # Clean up the flag file
         
     def style_message(self, sender, message):
         # Define bold style for the sender's name
@@ -381,32 +415,6 @@ class ChatApp(QMainWindow):
         return f'<img src="data:image/png;base64,{base64_data}"/>'
     
             
-    # def appendMessage(self, prefix, message, images=None):
-    #     cursor = self.chat_display.textCursor()
-    #     cursor.movePosition(cursor.End)
-    #     self.chat_display.setTextCursor(cursor)
-        
-    #     # Insert text message if available
-    #     if message:
-    #         # Convert markdown to HTML and style the message
-    #         message_html = self.markdown_to_html(message)
-    #         styled_message = self.style_message(prefix, message_html)
-    #         self.chat_display.insertHtml(styled_message + "<br>")  # Ensure it ends with a new line
-        
-    #     # Insert images if available
-    #     if images:
-    #         for pixmap in images:
-    #             # Scale the pixmap for displaying in the chat history
-    #             scaled_pixmap  = pixmap.scaled(self.CHAT_DISPLAY_IMAGE_WIDTH, self.CHAT_DISPLAY_IMAGE_HEIGHT, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
-    #             # cursor.insertImage(chat_display_pixmap.toImage())
-    #             image_html = self.pixmap_to_html(scaled_pixmap)
-    #             cursor.insertHtml(image_html)
-    #             cursor.insertText(" ")  # Add space after each image
-
-    #         self.chat_display.insertPlainText("\n")  # Add a newline after the last image
-
-    #     self.chat_display.ensureCursorVisible()
-        
     def appendMessage(self, prefix, message, images=None):
         cursor = self.chat_display.textCursor()
         cursor.movePosition(cursor.End)
@@ -435,10 +443,6 @@ class ChatApp(QMainWindow):
             styled_message = self.style_message("", message_html)  # Style the message
             self.chat_display.insertHtml(styled_message)  # Insert the styled message
             self.chat_display.insertPlainText("\n")  # Add a newline after the last image
-            # message_html = markdown.markdown(message, extensions=['extra', 'codehilite', 'nl2br'])
-            # styled_message = self.style_message("", message_html)  # Style the message
-            # self.chat_display.insertHtml(styled_message) 
-            # self.chat_display.insertPlainText("\n")  # Add a newline after the last image 
         
         self.chat_display.insertHtml("<br>")  # Ensure separation after the message block
         self.chat_display.ensureCursorVisible()

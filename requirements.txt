@@ -5,6 +5,7 @@ PyQt5==5.15.10
 urllib3==2.0.7
 uvicorn==0.24.0.post1
 markdown2==2.4.10
+keyboard==0.13.5
 openai
 python-decouple
 requests
