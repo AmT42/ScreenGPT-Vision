@@ -1,12 +1,12 @@
-# GPT Vision Chat – A Friendly Desktop Companion
+# ScreenGPT-Vision – A Friendly Desktop Companion
 
 ## Hey there, fellow explorers of GPT! 🚀
 
-I've put together a little side project called **GPT Vision Chat**. Think of it as a casual chat with GPT-4, but from the comfort of your desktop and with a cool twist: the ability to throw in images! Yep, now asking questions about those pesky screenshots or any visual puzzles is just a click or a hotkey away.
+I've put together a little side project called **ScreenGPT-Vision**. Think of it as a casual chat with GPT-4, but from the comfort of your desktop and with a cool twist: the ability to throw in images! Yep, now asking questions about those pesky screenshots or any visual puzzles is just a click or a hotkey away.
 
 ## What's This All About? 🤔
 
-Ever been knee-deep in work and stumbled upon an error message as cryptic as an ancient manuscript? Or maybe you've had a math equation staring at you from a photo, begging to be solved. Instead of tab-hopping and website navigating, why not just press a key, snag a screenshot, and get querying? That's the convenience GPT Vision Chat brings to your desktop!
+Ever been knee-deep in work and stumbled upon an error message as cryptic as an ancient manuscript? Or maybe you've had a math equation staring at you from a photo, begging to be solved. Instead of tab-hopping and website navigating, why not just press a key, snag a screenshot, and get querying? That's the convenience ScreenGPT-Vision brings to your desktop!
 
 ## Features (The Cool Bits) 🎉
 
@@ -23,6 +23,23 @@ Cobbled together in just 3 days, this app is my humble foray into desktop develo
 ## Join the Fun! 🎈
 
 Stumble upon this repo and find it neat? Star it, fork it, send pull requests, or just spread the good word – every bit of support counts. Your interest is the fuel for this project's growth. Let's make desktop AI chat a thing!
+
+## Compatibility Note 🍏
+
+Doesn't support MacOs
+
+
+## Watch It in Action! 📹
+
+Curious to see ScreenGPT-Vision in action? I've put together a couple of quick demos to show you just how easy and fun it is to use:
+
+- ![Locate Object on Screen Demo](videos/locate_folder.mp4)
+- ![Ask question about graphs](videos/graph_vit.mp4)
+- ![Get LaTeX of math equations](videos/equation_latex.mp4)
+- ![Get guided to build your landing page](videos/landing_page.mp4)
+
+Just click on the links above to watch the videos on YouTube. Don't forget to like and subscribe for more updates!
+
 
 ## How to Get It Rolling 🛠️
 
@@ -104,12 +121,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Citation 📄
 
-If you end up using GPT Vision Chat in your work, a shoutout would be super cool:
+If you end up using ScreenGPT-Vision in your work, a shoutout would be super cool:
 
 ```bibtex
   @misc{ScreenGPT-Vision,
     author = "AmT42",
-    title = "GPT Vision Chat for Desktop",
+    title = "ScreenGPT-Vision for Desktop",
     year = "2023",
     url = "https://github.com/AmT42/ScreenGPT-Vision"
   }
